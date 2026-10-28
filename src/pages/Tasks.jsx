@@ -654,7 +654,7 @@ export default function Tasks() {
                       ? 'Try a different keyword.'
                       : filter !== 'all'
                       ? 'Switch to "All" to see everything.'
-                      : 'Hit "Add Task" above to get started.'}
+                      : ''}
                   </p>
                 </div>
                 {!search && filter === 'all' && (
@@ -668,9 +668,9 @@ export default function Tasks() {
                 )}
               </div>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 stagger-children">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 stagger-children items-stretch">
                 {filtered.map((task) => (
-                  <div key={task.id} className="animate-fade-up">
+                  <div key={task.id} className="animate-fade-up h-full">
                     <TaskCard
                       task={task}
                       onEdit={handleEdit}
@@ -777,7 +777,7 @@ export default function Tasks() {
                   </p>
                   <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
                     {reminderFilter === 'upcoming'
-                      ? 'Hit "New Reminder" above to create one.'
+                      ? ''
                       : 'Past reminders will appear here.'}
                   </p>
                 </div>

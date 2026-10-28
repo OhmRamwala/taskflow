@@ -36,6 +36,40 @@ function getProfile() {
   } catch { return {} }
 }
 
+/* ── Avatar component for mobile overview ──────────────────────── */
+function MobileAvatar({ initials, photo, size = 64 }) {
+  if (photo) {
+    return (
+      <div
+        className="rounded-full overflow-hidden shadow-md shrink-0"
+        style={{ width: size, height: size }}
+      >
+        <img
+          src={photo}
+          alt="Profile"
+          className="w-full h-full object-cover"
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="rounded-full flex items-center justify-center shadow-md shrink-0"
+      style={{
+        width: size,
+        height: size,
+        background: 'linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #000))',
+      }}
+    >
+      {initials
+        ? <span className="font-bold" style={{ color: 'var(--accent-text)', fontSize: size * 0.33 }}>{initials}</span>
+        : <UserCircle size={size * 0.55} style={{ color: 'var(--accent-text)', opacity: 0.8 }} />
+      }
+    </div>
+  )
+}
+
 /* ── Section row (vertical list item) ────────────────────────── */
 function SectionRow({ icon: Icon, label, description, to, end, onClick, last }) {
   const inner = (
@@ -149,18 +183,7 @@ export default function ProfileLayout() {
                   }}
                 >
                   {/* Avatar — prominent, left-aligned */}
-                  <div
-                    className="rounded-full flex items-center justify-center shadow-md shrink-0"
-                    style={{
-                      width: 64, height: 64,
-                      background: 'linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #000))',
-                    }}
-                  >
-                    {initials
-                      ? <span className="font-bold" style={{ color: 'var(--accent-text)', fontSize: 64 * 0.33 }}>{initials}</span>
-                      : <UserCircle size={64 * 0.55} style={{ color: 'var(--accent-text)', opacity: 0.8 }} />
-                    }
-                  </div>
+                  <MobileAvatar initials={initials} photo={p.photo} size={64} />
 
                   {/* Name + role + edit button */}
                   <div className="flex-1 min-w-0">

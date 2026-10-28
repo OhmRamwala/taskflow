@@ -1,9 +1,44 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   UserCircle, Mail, Phone, MapPin, Briefcase,
-  CheckCircle2, Link as LinkIcon, ChevronLeft,
+  CheckCircle2, Link as LinkIcon, ChevronLeft, Camera, Upload, X,
 } from 'lucide-react'
+import { useProfilePhoto } from '../hooks/useProfilePhoto'
+
+/* ── Avatar ─────────────────────────────────────────────────────── */
+function Avatar({ initials, photo, size = 72 }) {
+  if (photo) {
+    return (
+      <div
+        className="rounded-full overflow-hidden shadow-md shrink-0"
+        style={{ width: size, height: size }}
+      >
+        <img
+          src={photo}
+          alt="Profile"
+          className="w-full h-full object-cover"
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="rounded-full flex items-center justify-center shadow-md shrink-0"
+      style={{
+        width: size,
+        height: size,
+        background: 'linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #000))',
+      }}
+    >
+      {initials
+        ? <span className="font-bold" style={{ color: 'var(--accent-text)', fontSize: size * 0.33 }}>{initials}</span>
+        : <UserCircle size={size * 0.55} style={{ color: 'var(--accent-text)', opacity: 0.8 }} />
+      }
+    </div>
+  )
+}
 
 /* ── Field input ────────────────────────────────────────────────── */
 function Field({ label, icon: Icon, type = 'text', value, onChange, placeholder }) {
@@ -30,7 +65,13 @@ function Field({ label, icon: Icon, type = 'text', value, onChange, placeholder 
 const PROFILE_KEY = 'taskflow-profile'
 
 export default function ProfilePersonal() {
+  const fileInputRef = useRef(null)
+  const { getPhoto, uploadPhoto, removePhoto, error, isUploading, clearError } = useProfilePhoto()
+
   const [saved, setSaved] = useState(false)
+  const [profilePhoto, setProfilePhoto] = useState(getPhoto())
+  const [showPhotoActions, setShowPhotoActions] = useState(false)
+
   const [profile, setProfile] = useState(() => {
     try {
       const raw = localStorage.getItem(PROFILE_KEY)
@@ -42,6 +83,12 @@ export default function ProfilePersonal() {
     }
   })
 
+  // Sync photo state when profile changes in localStorage
+  useEffect(() => {
+    const photo = getPhoto()
+    setProfilePhoto(photo)
+  }, [getPhoto, profile])
+
   const set = (k, v) => setProfile((prev) => ({ ...prev, [k]: v }))
 
   const handleSave = (e) => {
@@ -50,6 +97,34 @@ export default function ProfilePersonal() {
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
+
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const photo = await uploadPhoto(file)
+    if (photo) {
+      setProfilePhoto(photo)
+      setShowPhotoActions(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleRemovePhoto = () => {
+    removePhoto()
+    setProfilePhoto(null)
+    setShowPhotoActions(false)
+  }
+
+  const initials = profile.name
+    ? profile.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+    : null
 
   return (
     <div className="space-y-5">
@@ -73,6 +148,130 @@ export default function ProfilePersonal() {
           Update your name, contact details, and bio.
         </p>
       </div>
+
+      {/* ── Avatar row ────────────────────────────────────────────── */}
+      <div
+        className="flex items-start gap-4 p-4 rounded-2xl animate-fade-up"
+        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', animationDelay: '20ms' }}
+      >
+        {/* Avatar with photo controls */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative shrink-0">
+            <Avatar initials={initials} photo={profilePhoto} size={80} />
+
+            {/* Camera button */}
+            <button
+              onClick={() => setShowPhotoActions(!showPhotoActions)}
+              className="absolute bottom-0 right-0 w-7 h-7 rounded-full flex items-center justify-center shadow-md transition-all"
+              style={{
+                background: 'var(--accent)',
+                border: '2px solid var(--bg-surface)',
+                color: 'var(--accent-text)',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
+              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+              aria-label={profilePhoto ? 'Change photo' : 'Add photo'}
+              title={profilePhoto ? 'Change photo' : 'Add photo'}
+            >
+              <Camera size={13} />
+            </button>
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              onChange={handleFileChange}
+              className="hidden"
+              aria-label="Upload profile photo"
+            />
+          </div>
+
+          {/* Photo action buttons */}
+          {showPhotoActions && (
+            <div className="flex flex-col gap-2 w-full animate-fade-in">
+              <button
+                onClick={handlePhotoClick}
+                disabled={isUploading}
+                className="flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg transition-all active:scale-95"
+                style={{
+                  background: 'var(--accent-light)',
+                  color: 'var(--accent)',
+                  border: '1px solid color-mix(in srgb, var(--accent) 25%, transparent)',
+                  opacity: isUploading ? 0.6 : 1,
+                  cursor: isUploading ? 'not-allowed' : 'pointer',
+                }}
+                onMouseEnter={(e) => !isUploading && (e.currentTarget.style.opacity = '0.8')}
+                onMouseLeave={(e) => !isUploading && (e.currentTarget.style.opacity = '1')}
+              >
+                <Upload size={12} />
+                {isUploading ? 'Uploading...' : (profilePhoto ? 'Change Photo' : 'Add Photo')}
+              </button>
+
+              {profilePhoto && (
+                <button
+                  onClick={handleRemovePhoto}
+                  disabled={isUploading}
+                  className="flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg transition-all active:scale-95"
+                  style={{
+                    background: 'var(--danger-light)',
+                    color: 'var(--danger)',
+                    border: '1px solid color-mix(in srgb, var(--danger) 25%, transparent)',
+                    opacity: isUploading ? 0.6 : 1,
+                    cursor: isUploading ? 'not-allowed' : 'pointer',
+                  }}
+                  onMouseEnter={(e) => !isUploading && (e.currentTarget.style.opacity = '0.8')}
+                  onMouseLeave={(e) => !isUploading && (e.currentTarget.style.opacity = '1')}
+                >
+                  <X size={12} />
+                  Remove Photo
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Profile info */}
+        <div className="flex-1 min-w-0 pt-1">
+          <p className="font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
+            {profile.name || 'Your Name'}
+          </p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            {profile.role || 'Your Role'}
+          </p>
+          {profile.email && (
+            <p className="text-xs mt-1 truncate" style={{ color: 'var(--text-muted)' }}>
+              {profile.email}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Error message */}
+      {error && (
+        <div
+          className="flex items-start gap-2 p-3 rounded-xl animate-fade-in"
+          style={{
+            background: 'var(--danger-light)',
+            border: '1px solid color-mix(in srgb, var(--danger) 25%, transparent)',
+          }}
+        >
+          <X size={14} style={{ color: 'var(--danger)', marginTop: 1, flexShrink: 0 }} />
+          <div className="flex-1">
+            <p className="text-xs font-semibold" style={{ color: 'var(--danger)' }}>
+              {error}
+            </p>
+          </div>
+          <button
+            onClick={clearError}
+            className="shrink-0"
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            aria-label="Dismiss error"
+          >
+            <X size={14} style={{ color: 'var(--danger)', opacity: 0.6 }} />
+          </button>
+        </div>
+      )}
 
       {/* ── Form ──────────────────────────────────────────────────── */}
       <form onSubmit={handleSave} className="space-y-4 animate-fade-up" style={{ animationDelay: '40ms' }}>
